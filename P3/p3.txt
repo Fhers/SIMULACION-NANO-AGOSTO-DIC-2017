@@ -1,0 +1,158 @@
+> primo <- function(n) {
++     for (i in 2:(n-1)) {
++         if ((n > i && n %% i) == 0) { # residuo es cero
++             return(FALSE)
++         }
++     }
++     return(TRUE)
++ }
+> resultados <- numeric() # un vector vacio
+> for (n in 1:100) {
++     resultados <- c(resultados, primo(n)) # combinar vectores
++ }
+> cat(resultados, "\n")
+0 0 1 0 1 0 1 0 0 0 1 0 1 0 0 0 1 0 1 0 0 0 1 0 0 0 0 0 1 0 1 0 0 0 0 0 1 0 0 0 1 0 1 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0 1 0 0 0 0 0 1 0 0 0 1 0 1 0 0 0 0 0 1 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0 0 1 0 0 0 
+> primo <- function(n) {
++     if (n < 4) {
++         return(TRUE)
++     }
++     if (n %% 2 == 0) { # par
++         return(FALSE)
++     }
++     for (i in seq(3, max(3, n - 1), 2)) {
++         if (n %% i == 0) {
++             return(FALSE)
++         }
++     }
++     return(TRUE)
++ }
+> 
+> primos <- numeric()
+> for (n in 1:100) {
++     if (primo(n)) {
++         primos <-  c(primos, n)
++     }
++ }
+> cat(primos, "\n")
+1 2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97 
+> primo <- function(n) {
++     if (n < 4) {
++         return(TRUE)
++     }
++     if (n %% 2 == 0) {
++         return(FALSE)
++     }
++     for (i in seq(3, max(3, ceiling(sqrt(n))), 2)) {
++         if (n %% i == 0) {
++             return(FALSE)
++         }
++     }
++     return(TRUE)
++ }
+> 
+> suppressMessages(library(doParallel))
+> registerDoParallel(makeCluster(detectCores() - 1))
+> primos <- foreach(n = 1:300, .combine=c) %dopar% primo(n)
+> stopImplicitCluster()
+> print(paste(sum(primos), "primos encontrados"))
+[1] "63 primos encontrados"
+> primo <- function(n) {
++     if (n < 4) {
++         return(TRUE)
++     }
++     if (n %% 2 == 0) {
++         return(FALSE)
++     }
++     for (i in seq(3, max(3, ceiling(sqrt(n))), 2)) {
++         if (n %% i == 0) {
++             return(FALSE)
++         }
++     }
++     return(TRUE)
++ }
+> 
+> d <- 10000 # desde
+> h <-  20000 # hasta
+> replicas <- 30
+> suppressMessages(library(doParallel))
+> registerDoParallel(makeCluster(detectCores() - 1))
+> tiempos <-  numeric()
+> for (r in 1:replicas) {
++     # tomamos el "elapsed" de la salida de system.time, es el tercer dato
++     t <- system.time(foreach(n = d:h, .combine=c) %dopar% primo(n))[3]
++     tiempos <- c(tiempos, t)
++ }
+Warning messages:
+1: In .Internal(gc(verbose, reset)) :
+  closing unused connection 9 (<-DESKTOP-O2Q7DPO:11032)
+2: In .Internal(gc(verbose, reset)) :
+  closing unused connection 8 (<-DESKTOP-O2Q7DPO:11032)
+3: In .Internal(gc(verbose, reset)) :
+  closing unused connection 7 (<-DESKTOP-O2Q7DPO:11032)
+4: In .Internal(gc(verbose, reset)) :
+  closing unused connection 6 (<-DESKTOP-O2Q7DPO:11032)
+5: In .Internal(gc(verbose, reset)) :
+  closing unused connection 5 (<-DESKTOP-O2Q7DPO:11032)
+6: In .Internal(gc(verbose, reset)) :
+  closing unused connection 4 (<-DESKTOP-O2Q7DPO:11032)
+7: In .Internal(gc(verbose, reset)) :
+  closing unused connection 3 (<-DESKTOP-O2Q7DPO:11032)
+> stopImplicitCluster()
+> summary(tiempos)
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  1.980   2.000   2.025   2.035   2.060   2.170 
+> primo <- function(n) {
++     if (n == 1 || n == 2) {
++         return(TRUE)
++     }
++     if (n %% 2 == 0) {
++         return(FALSE)
++     }
++     for (i in seq(3, max(3, ceiling(sqrt(n))), 2)) {
++         if ((n %% i) == 0) {
++             return(FALSE)
++         }
++     }
++     return(TRUE)
++ }
+> 
+> desde <- 1000
+> hasta <-  3000
+> original <- desde:hasta
+> invertido <- hasta:desde
+> replicas <- 10
+> suppressMessages(library(doParallel))
+> registerDoParallel(makeCluster(detectCores() - 1))
+> ot <-  numeric()
+> it <-  numeric()
+> at <-  numeric()
+> for (r in 1:replicas) {
++     ot <- c(ot, system.time(foreach(n = original, .combine=c) %dopar% primo(n))[3]) # de menor a mayor
++     it <- c(it, system.time(foreach(n = invertido, .combine=c) %dopar% primo(n))[3]) # de mayor a menor
++     at <- c(at, system.time(foreach(n = sample(original), .combine=c) %dopar% primo(n))[3]) # orden aleatorio
++ }
+Warning messages:
+1: In .Internal(gc(verbose, reset)) :
+  closing unused connection 16 (<-DESKTOP-O2Q7DPO:11032)
+2: In .Internal(gc(verbose, reset)) :
+  closing unused connection 15 (<-DESKTOP-O2Q7DPO:11032)
+3: In .Internal(gc(verbose, reset)) :
+  closing unused connection 14 (<-DESKTOP-O2Q7DPO:11032)
+4: In .Internal(gc(verbose, reset)) :
+  closing unused connection 13 (<-DESKTOP-O2Q7DPO:11032)
+5: In .Internal(gc(verbose, reset)) :
+  closing unused connection 12 (<-DESKTOP-O2Q7DPO:11032)
+6: In .Internal(gc(verbose, reset)) :
+  closing unused connection 11 (<-DESKTOP-O2Q7DPO:11032)
+7: In .Internal(gc(verbose, reset)) :
+  closing unused connection 10 (<-DESKTOP-O2Q7DPO:11032)
+> stopImplicitCluster()
+> summary(ot)
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.3700  0.3900  0.4050  0.4110  0.4175  0.5000 
+> summary(it)
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  0.390   0.390   0.395   0.402   0.410   0.440 
+> summary(at)
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  0.390   0.390   0.405   0.408   0.420   0.450 

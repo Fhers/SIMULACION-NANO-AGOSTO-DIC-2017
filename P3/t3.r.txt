@@ -1,0 +1,44 @@
+
+desde <- 10
+hasta <-  1000
+original <- desde:hasta
+invertido <- hasta:desde
+for(i in hasta:desde){
+  if(primo(i)){
+    maxprimo=i
+    break
+  }
+}
+peor=rep(maxprimo,length(desde:hasta)) 
+mejor=rep(as.integer(4),length(desde:hasta)) 
+
+replicas <- 50
+suppressMessages(library(doParallel))
+datos=data.frame(matrix(vector(), 0, 3 ))
+num_nucleos=detectCores()
+for(nucleos in 1:(num_nucleos-1)){
+  cluster=makeCluster(nucleos)
+  registerDoParallel(cluster,cores=nucleos)
+  ot <-  numeric()
+  it <-  numeric()
+  at <-  numeric()
+  pt <-  numeric()
+  mt <-  numeric()
+  for (r in 1:replicas) {
+    pt <- c(pt, system.time(foreach(n = peor, .combine=c) %dopar% primo(n))[3]) # copias del maximo primo menor que 'hasta'
+    mt <- c(mt, system.time(foreach(n = mejor, .combine=c) %dopar% primo(n))[3]) #solo numeros pares (es indistinto cual sea de 4 en delante)
+    ot <- c(ot, system.time(foreach(n = original, .combine=c) %dopar% primo(n))[3]) # de menor a mayor
+    it <- c(it, system.time(foreach(n = invertido, .combine=c) %dopar% primo(n))[3]) # de mayor a menor
+    at <- c(at, system.time(foreach(n = sample(original), .combine=c) %dopar% primo(n))[3]) # orden aleatorio
+    
+    datos=rbind(datos,cbind(nucleos,"Ascendente",as.numeric(ot)),cbind(nucleos,"Descendiente",as.numeric(it)),
+                cbind(nucleos,"Aleatorio",as.numeric(at)),cbind(nucleos,"PeorCaso",as.numeric(pt)),
+                cbind(nucleos,"MejorCaso",as.numeric(mt)))
+  }
+  stopImplicitCluster()
+  stopCluster(cluster)
+}
+names(datos)=c("Nucleos", "Orden", "Tiempo")
+datos$Nucleos=factor(datos$Nucleos)
+datos$Orden=factor(datos$Orden)
+datos$Tiempo=as.numeric(paste(datos$Tiempo))
