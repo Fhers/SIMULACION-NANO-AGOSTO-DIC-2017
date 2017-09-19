@@ -1,0 +1,119 @@
+# Fernando Gonzalez Mat 1306642
+
+suppressMessages(library(doParallel))
+cluster <- makeCluster(detectCores(3) - 1)
+
+l <- 1.75 
+n <- 60
+pi <- 0.085 
+pr <- 0.035 
+v <- l / 50 
+antiviral <- seq(0.15,0.75,0.1) 
+ 
+principio <- function() {
+  e <- "S"
+  if (runif(1) < pi) {
+    e <- "I"
+  }
+  edo_inicial <- data.frame(x = runif(1, 0, l), y = runif(1, 0, l),
+                            dx = runif(1, -v, v), dy = runif(1, -v, v),
+                            estado = e)
+  return(edo_inicial)
+}
+
+refresh <- function(i) {
+  a <- agentes[i, ]
+  print(a)
+  if (contagios[i]) {
+    a$estado <- "I"
+  } else if (a$estado == "I") { # infectado
+    if (runif(1) < pr) {
+      a$estado <- "R" # recuperado
+    }
+  }
+  a$x <- a$x + a$dx
+  a$y <- a$y + a$dy
+  if (a$x > l) {
+    a$x <- a$x - l
+  }
+  if (a$y > l) {
+    a$y <- a$y - l
+  }
+  if (a$x < 0) {
+    a$x <- a$x + l
+  }
+  if (a$y < 0) {
+  }
+  return(a)
+}
+
+agentes <- data.frame(x = double(), y = double(), dx = double(), dy = double(), estado  = character())
+resultados <- data.frame()
+
+registerDoParallel(cluster)
+for(pv in antiviral) {
+agentes <- foreach(i = 1:n, .combine=rbind) %dopar% principio()
+levels(agentes$estado) <- c("S", "I", "R")
+
+
+epidemia <- integer()
+r <- 0.1 # radio de infeccion
+tmax <- 60 # tiempo de simulacion
+digitos <- floor(log(tmax, 10)) + 1
+
+# para tiempos
+
+for (tiempo_transcurrido in 1:tmax) { 
+  infectados <- dim(agentes[agentes$estado == "I",])[1]
+  epidemia <- c(epidemia, infectados)
+  if (infectados == 0) { # sin infectados
+    break
+  }
+  
+  contagios <- rep(FALSE, n)
+  for (i in 1:n) {
+    a1 <- agentes[i, ]
+    if (a1$estado == "I") { # variable infectados
+      for (j in 1:n) {
+        if (!contagios[j]) { # no hay contagio
+          a2 <- agentes[j, ]
+          if (a2$estado == "S") { # tendencia a susceptibles
+            dx <- a1$x - a2$x
+            dy <- a1$y - a2$y
+            d <- sqrt(dx^2 + dy^2)
+            if (d < r) { # umbral
+              p <- (r - d) / r
+              if (runif(1) < p) {
+                contagios[j] <- TRUE
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  registerDoParallel(cluster)
+  agentes <- foreach(i = 1:n, .combine=rbind) %dopar% refresh(i)
+  stopImplicitCluster()
+
+  aS <- agentes[agentes$estado == "S",]
+  aI <- agentes[agentes$estado == "I",]
+  aR <- agentes[agentes$estado == "R",]
+}
+       m <- mean(epidemia)
+        resultados <- rbind(resultados, c(pv, 100 * m / n))
+}
+stopImplicitCluster()
+
+resultados <- resultados[,-1]
+
+png("p6r1.png")
+plot(resultados, xlab="Probabilidad vacuna", ylab="Promedio de infectados", xaxt='n')
+axis(1, at=1:10, labels= antiviral)
+graphics.off()
+
+
+
+
+
