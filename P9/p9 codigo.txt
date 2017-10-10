@@ -1,0 +1,135 @@
+
+# Practica No. 9
+#Fernando Gonzalez
+library(ggplot2)
+n <- 50
+f<- 1 #opcional para fuerzas
+p <- data.frame(x = rnorm(n), y=rnorm(n), c=rnorm(n), m=abs(rnorm(n)))
+
+xmax <- max(p$x)
+xmin <- min(p$x)
+p$x <- (p$x - xmin) / (xmax - xmin) # ahora son de 0 a 1
+ymax <- max(p$y)
+ymin <- min(p$y)
+p$y <- (p$y - ymin) / (ymax - ymin) # las y tambien
+cmax <- max(p$c)
+cmin <- min(p$c)
+p$c <- (p$c - cmin) / (cmax - cmin)
+mmax <- max(p$m)
+mmin <- min(p$m)
+p$m <- (p$m - mmin) / (mmax - mmin) #  agregar masa a la particula
+
+p$c <- 2 * (p$c - cmin) / (cmax - cmin) - 1 # cargas son entre -1 y 1
+p$g <- round(10 * p$c) # coloreamos segun la carga a 11 niveles de -5 a 5
+paso <- floor(256 / 10)
+# agregamos los colores segun los niveles de carga
+niveles <- seq(0, 255, paso)
+colores <- rgb(niveles, rep(0, 11), rev(niveles), max=255)
+png("p9i.png")
+
+### crear la formulacion
+
+library(lattice)
+xyplot(y ~ x, group=g, data=p, auto.key=list(space="right"),
+       xlab="X", ylab="Y", main="Part\u{00ed}culas generadas",
+       par.settings = list(superpose.symbol = list(pch = 15, cex = 1.5,
+                                                   col = colores)))
+pix=p$x
+piy=p$y
+pic=p$c
+pim=p$m
+pig=p$g
+              resul=data.frame()
+              final=data.frame()
+              
+
+graphics.off()
+eps <- 0.001
+fuerza <- function(i) {
+  mi <- p[i,]$m
+  xi <- p[i,]$x
+  yi <- p[i,]$y
+  ci <- p[i,]$c
+  gi <- p[i,]$g
+  
+  fx <- 0
+  fy <- 0
+  
+  for (j in 1:n) {
+    cj <- p[j,]$c
+    #condiciones de la particula segun su polaridad
+    dir <- (-1)^(1 + 1 * (ci * cj < 0))
+    #particula separada de otra
+    dx <- (xi - p[j,]$x)
+    dy <- (yi - p[j,]$y)
+    # ejercer una relacion entre la carga y la distancia
+    factor <- dir * abs(ci - cj) / (sqrt(dx^2 + dy^2) + eps)
+    fx <- fx - dx * factor
+    fy <- fy - dy * factor
+  }
+  return(c(fx, fy))
+}
+
+suppressMessages(library(doParallel))
+registerDoParallel(makeCluster(detectCores() - 1))
+system("rm -f p9_t*.png") # borramos anteriores en el caso que lo hayamos corrido
+tmax <- 100
+digitos <- floor(log(tmax, 10)) + 1
+tl <- "0"
+while (nchar(tl) < digitos) {
+  tl <- paste("0", tl, sep="")
+}
+png(paste("p9_t", tl, ".png", sep=""))
+
+plot(p$x, p$y, col=colores[p$g+6], pch=15, cex=1.5, xlim=c(-0.1, 1.1), ylim=c(-0.1, 1.1),
+     main="Estado inicial", xlab="X", ylab="Y")
+graphics.off()
+
+
+p$m=as.factor(p$m)
+p$g=as.factor(p$g)
+#comenzaremos la grafica
+
+ggplot()+
+  geom_point(data = p, aes(x= p$x, y= p$y, size=p$m, color= p$g))+
+  scale_color_manual(values = colores)+
+  ggtitle("Estado inicial")+
+  theme(plot.title = element_text(hjust = 0.5))+
+  guides(size=FALSE, color=guide_legend(title = "carga"))+
+  scale_x_continuous(name = "x", limits = c(0,5))+
+  scale_y_continuous(name = "y", limits = c(0,5))
+ggsave("P9_paso_0.png")
+
+for (iter in 1:tmax) {
+  f <- foreach(i = 1:n, .combine=c) %dopar% fuerza(i)
+  delta <- 0.01 / max(abs(f)) # que nadie desplace una paso muy largo
+  p$x <- foreach(i = 1:n, .combine=c) %dopar% max(min(p[i,]$x + delta * f[c(TRUE, FALSE)][i], 1), 0)
+  p$y <- foreach(i = 1:n, .combine=c) %dopar% max(min(p[i,]$y + delta * f[c(FALSE, TRUE)][i], 1), 0)
+  
+  tl <- paste(iter, "", sep="")
+  while (nchar(tl) < digitos) {
+    tl <- paste("0", tl, sep="")
+  }
+  png(paste("p9_t", tl, ".png", sep=""))
+  plot(p$x, p$y, col=colores[p$g+6], pch=15, cex=1.5, xlim=c(-0.1, 1.1), ylim=c(-0.1, 1.1),
+       main=paste("Paso", iter), xlab="X", ylab="Y")
+  graphics.off()
+}
+# pasos con una secuencia
+ggplot()+
+  geom_point(data = p, aes(x= p$x, y= p$y, size=p$m, color= p$g))+
+  scale_color_manual(values = colores)+
+  ggtitle(paste("paso",iter))+
+  theme(plot.title = element_text(hjust = 0.5))+
+  guides(size=FALSE, color=guide_legend(title = "carga"))+
+  scale_x_continuous(name = "x", limits = c(0,5))+
+  scale_y_continuous(name = "y", limits = c(0,5))
+ggsave(paste("P9_paso",iter,".png"))
+
+stopImplicitCluster()
+
+
+library(magick)
+frames=lapply(1:tmax,function(x) image_read(paste("P9_p_",x,".png")))
+animation <- image_animate(image_join(frames), fps=100)
+image_write(animation, paste("P9_R1", ".gif"))
