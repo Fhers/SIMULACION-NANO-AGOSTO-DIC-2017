@@ -1,0 +1,28 @@
+assert: compara las variables
+con que numero de onjetos
+
+como mejora la paralelizacion
+
+ciuantas generaciones mejora
+
+cuantos se necwesita para mejorar
+
+
+-----------------------------
+
+reto1
+
+seleccion eletista
+
+probabilidad de mejor valor para las desendencia
+?afecto tiemo
+?afecto la solucion
+?
+------------------------------
+reto2
+
+elitista en momento supervivencia
+mejora de tiempo
+cuantas generaciones
+cuanto se necesita mejorar
+
