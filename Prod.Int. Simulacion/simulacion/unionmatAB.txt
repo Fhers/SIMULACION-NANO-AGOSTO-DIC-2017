@@ -1,0 +1,10 @@
+library(rgl)
+source('~/Prod.Int. Simulacion/simulacion/matrizA.xlsx', encoding = 'UTF-8')
+source('~/Prod.Int. Simulacion/simulacion/matrizB.xlsx', encoding = 'UTF-8')
+
+knit_hooks$set(webgl = hook_webgl)
+x <- sort(rnorm(100))
+y <- rnorm(10)
+z <- rnorm(10) + atan2(x, y)
+open3d()
+plot3d(x, y, z, col = rainbow(1000))
